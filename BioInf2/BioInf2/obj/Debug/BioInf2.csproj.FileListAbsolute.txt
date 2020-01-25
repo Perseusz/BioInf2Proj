@@ -1,0 +1,7 @@
+C:\Users\Perseusz\source\repos\BioInf2\BioInf2\bin\Debug\BioInf2.exe.config
+C:\Users\Perseusz\source\repos\BioInf2\BioInf2\bin\Debug\BioInf2.exe
+C:\Users\Perseusz\source\repos\BioInf2\BioInf2\bin\Debug\BioInf2.pdb
+C:\Users\Perseusz\source\repos\BioInf2\BioInf2\obj\Debug\BioInf2.csprojAssemblyReference.cache
+C:\Users\Perseusz\source\repos\BioInf2\BioInf2\obj\Debug\BioInf2.csproj.CoreCompileInputs.cache
+C:\Users\Perseusz\source\repos\BioInf2\BioInf2\obj\Debug\BioInf2.exe
+C:\Users\Perseusz\source\repos\BioInf2\BioInf2\obj\Debug\BioInf2.pdb

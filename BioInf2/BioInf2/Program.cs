@@ -4,13 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
+using System.Diagnostics;
 
 namespace BioInf2
 {
     class Program
     {
-        private static List<Node> graph;
         private static List<string> spectrum;
+        private static List<TrueNode> trueGraph;
         static void Main(string[] args)
         {
             Regex regex1 = new Regex(@"[ACGT]");
@@ -22,8 +23,8 @@ namespace BioInf2
             bool correctSubSeq = false; // flaga do sprawdzania poprawności wpisywanych podsekwencji dla spektrum
             bool correctErrorLength = false; // czy poprawna ilość możliwych błędów (0-3)
             bool correctGraph = false; // czy graf jest poprawny pod tworzenie ścieżki Eulera
-            graph = new List<Node>();
             spectrum = new List<string>();
+            trueGraph = new List<TrueNode>();
 
             Console.WriteLine("Sekwencjonowanie przez hybrydyzację.");
             
@@ -108,7 +109,7 @@ namespace BioInf2
             Console.WriteLine("Podaj liczbę możliwych błędów pozytywnych/negatywnych.");
             while (!correctErrorLength)
             {
-                Console.Write("Ilość podsekwencji: ");
+                Console.Write("Ilość możliwych błędów: ");
                 string tempSpectrumLength = Console.ReadLine();
                 Console.WriteLine("");
                 bool isNumeric = int.TryParse(tempSpectrumLength, out int temp);
@@ -123,22 +124,34 @@ namespace BioInf2
                 }
             }
 
+            MakeTrueGraph(k);
+            string result = EulerianTrueGraphPath(k, howManyPossibleErrors);
 
-            // --- sprawdzenie czy ze spektrum da się złożyć sekwencję DNA podaną wcześniej
-            MakeGrapf(spectrum, k);
-            correctGraph = ValidateGraph(graph, lengthOfSpectrum);
-            if(!correctGraph)
+            if(result == "0")
             {
-                Console.WriteLine("W grafie nie da się wyznaczyć ścieżki Eulera!");
-                Console.WriteLine("Z tego spektrum nie stworzy się DNA!");
+                Console.WriteLine("Niestety nie udało się stworzyć DNA.");
+                Console.WriteLine("Przynajmniej jeden wierzchołek ma zbyt dużą nierówność ilości połączeń wchodzących i wychodzących.");
+            }
+            else if(result == "1")
+            {
+                Console.WriteLine("Niestety nie udało się stworzyć DNA.");
+                Console.WriteLine("Liczba wierzchołków, które pozwalają na stworzenie ścieżki Eulera, które mają różną ilość połączeń wchodzących i wychodzących jest różna od 2.");
+            }
+            else if(result == "2")
+            {
+                Console.WriteLine("Niestety nie udało się stworzyć DNA.");
+                Console.WriteLine("Wierzchołki z różną liczbą wejść i wyjść nie dopełniają się(1 ma mieć więcej wyjść drugi wejść.");
+            }
+            else if(result == "3")
+            {
+                Console.WriteLine("Niestety nie udało się stworzyć DNA.");
+                Console.WriteLine("Liczba błędów przekroczyła dopuszczalną przez użytkownika wartość.");
             }
             else
             {
-                string seq = EulerPathDNA(graph, lengthOfSpectrum);
-                // --> TO DO!!!!!!!!!!!!!
-
+                Console.WriteLine("Sukces! Udało się stworzyć DNA.");
+                Console.WriteLine("DNA: {0}", result);
             }
-
 
             string stop = Console.ReadLine();
         }
@@ -167,116 +180,247 @@ namespace BioInf2
             }
             Console.WriteLine("]");
         }
-
-        // tworzenie grafu
-        public static void MakeGrapf(List<string> spectrum, int k)
+        
+        // tworzy graf jak w wykładzie w5 z dawniejszych wykładów
+        public static void MakeTrueGraph(int k)
         {
-            for (int i = 0; i < spectrum.Count(); i++)
+            for(int i = 0; i < spectrum.Count(); i++)
             {
-                Node n = new Node(spectrum[i]);
-                int next = i + 1;
-                if (next >= spectrum.Count())
+                if (i == 0)
                 {
-                    next = spectrum.Count() - 1;
-                }
-
-                int before = i - 1;
-                if (before >= 0)
-                {
-                    if (graph[graph.Count - 1].GetCoverage(n.GetValue()) == 0)
+                    TrueNode temp = new TrueNode(spectrum[i].Substring(0, k - 1));
+                    TrueNode temp2 = new TrueNode(spectrum[i].Substring(1, k - 1));
+                    if(spectrum[i].Substring(0, k - 1) == spectrum[i].Substring(1, k - 1))
                     {
-                        if (n.GetCoverage(spectrum[next]) == 0)
-                        {
-                            //error
-                        }
-                        graph.Add(n);
-                        n.SetId(graph.Count);
+                        temp.AddOutNeighbour(temp2.GetValue());
+                        trueGraph.Add(temp);
                     }
                     else
                     {
-                        graph.Add(n);
-                        n.SetId(graph.Count);
+                        temp.AddOutNeighbour(temp2.GetValue());
+                        trueGraph.Add(temp);
+                        trueGraph.Add(temp2);
                     }
                 }
                 else
                 {
-                    if (n.GetCoverage(spectrum[next]) == 0)
+                    bool isNew = true;
+                    int counter = 0;
+                    foreach (TrueNode n in trueGraph)
                     {
-                        //error
+                        if (spectrum[i].Substring(0, k - 1) == n.GetValue())
+                        {
+                            trueGraph[counter].AddOutNeighbour(spectrum[i].Substring(1, k - 1));
+                            isNew = false;
+                            break;
+                        }
+                        counter++;
+                    }
+                    if(isNew)
+                    {
+                        TrueNode temp = new TrueNode(spectrum[i].Substring(0, k - 1));
+                        TrueNode temp2 = new TrueNode(spectrum[i].Substring(1, k - 1));
+                        if (spectrum[i].Substring(0, k - 1) == spectrum[i].Substring(1, k - 1))
+                        {
+                            temp.AddOutNeighbour(temp2.GetValue());
+                            trueGraph.Add(temp);
+                        }
+                        else
+                        {
+                            isNew = true;
+                            foreach (TrueNode n in trueGraph)
+                            {
+                                if (spectrum[i].Substring(1, k - 1) == n.GetValue())
+                                {
+                                    isNew = false;
+                                    break;
+                                }
+                            }
+                            if (isNew)
+                            {
+                                temp.AddOutNeighbour(temp2.GetValue());
+                                trueGraph.Add(temp);
+                                trueGraph.Add(temp2);
+                            }
+                            else
+                            {
+                                temp.AddOutNeighbour(temp2.GetValue());
+                                trueGraph.Add(temp);
+                            }
+                        }
                     }
                     else
                     {
-                        graph.Add(n);
-                        n.SetId(graph.Count);
-                    }
-                }
-            }
-            
-            foreach (Node node in graph)
-            {
-                foreach (Node node1 in graph)
-                {
-                    if (node1 != node)
-                    {
-                        node.AddNeighbour(node1);
-                    }
-
-                }
-            }
-
-        }
-        
-        // sprawdzenie czy w grafie można stworzyć ścieżkę Eulera, bez tego nie stworzymy DNA ze spektrum
-        public static bool ValidateGraph(List<Node> graph, int lengthOfSpectrum)
-        {
-            bool isGoodGraph = true;
-            int tempConnectionValue = 0;
-            int nodeEdgesValue = 0;
-            int incorrect = 0;
-            int maxIncorrect = 2;
-            for(int i = 0; i < lengthOfSpectrum; i++)
-            {
-                for(int j = 0; j < lengthOfSpectrum - 1; j++)
-                {
-                    if (graph[i] != graph[j])
-                    {
-                        tempConnectionValue = graph[i].GetNeighbourConnection(graph[j]);
-                        if(tempConnectionValue > 0)
+                        isNew = true;
+                        foreach (TrueNode n in trueGraph)
                         {
-                            nodeEdgesValue++;
+                            if (spectrum[i].Substring(1, k - 1) == n.GetValue())
+                            {
+                                isNew = false;
+                                break;
+                            }
+                        }
+                        if(isNew)
+                        {
+                            TrueNode temp2 = new TrueNode(spectrum[i].Substring(1, k - 1));
+                            trueGraph.Add(temp2);
                         }
                     }
                 }
-                if(nodeEdgesValue%2 != 0)
-                {
-                    incorrect++;
-                }
-                if(incorrect > maxIncorrect)
-                {
-                    isGoodGraph = false;
-                    break;
-                }
-                nodeEdgesValue = 0;
             }
 
-            return isGoodGraph;
+            foreach(TrueNode n in trueGraph)
+            {
+                foreach(TrueNode m in trueGraph)
+                {
+                    if(m.IsInOutNeighbours(n.GetValue()))
+                    {
+                        n.AddInNeighbour(m.GetValue());
+                    }
+                }
+            }
+
         }
 
-        // tworzenie ścieżki Eulera -> DNA
-        public static string EulerPathDNA(List<Node> graph, int lengthOfSpectrum) // --> TO DO!!!!!!!!!!!!!
+        // wybieranie startowego wierzchołka przy tworzeniu ścieżki Eulera
+        public static string GetStartingTrueNode()
+        {
+            string result = trueGraph[0].GetValue();
+            int howManyNotTheSame = 0;
+            int howManyMoreIn = 0;
+            int howManyMoreOut = 0;
+            bool isGood = true;
+
+            foreach(TrueNode n in trueGraph)
+            {
+                if(n.CountInNeighbours() != n.CountOutNeighbours())
+                {
+                    howManyNotTheSame++;
+                    if(n.CountInNeighbours() > n.CountOutNeighbours())
+                    {
+                        if((n.CountInNeighbours() - n.CountOutNeighbours()) > 1)
+                        {
+                            isGood = false;
+                            break;
+                        }
+                        howManyMoreIn++;
+                    }
+                    if (n.CountInNeighbours() < n.CountOutNeighbours())
+                    {
+                        if ((n.CountOutNeighbours() - n.CountInNeighbours()) > 1)
+                        {
+                            isGood = false;
+                            break;
+                        }
+                        result = n.GetValue();
+                        howManyMoreOut++;
+                    }
+                }
+            }
+
+            if(!isGood)
+            {
+                result = "0";
+                return result;
+            }
+            if(howManyNotTheSame > 0 && howManyNotTheSame != 2)
+            {
+                result = "1";
+                return result;
+            }
+            if(howManyNotTheSame == 2 && howManyMoreIn != 1 && howManyMoreOut != 1)
+            {
+                result = "2";
+                return result;
+            }
+
+            return result;
+        }
+
+        // tworzenie ścieżki Eulera dla grafu skierowanego
+        public static string EulerianTrueGraphPath(int k, int howManyPossibleErrors)
         {
             string madeSeq = "";
-            int counter = 0;
-            bool isDone = false;
-            while(!isDone)
+            Stack<TrueNode> stack = new Stack<TrueNode>();
+            List<TrueNode> eulerPath = new List<TrueNode>();
+
+            if (trueGraph.Count == 0)
             {
+                Console.WriteLine("Graf nie ma wierzchołków");
+                return madeSeq;
+            }
 
+            string start = GetStartingTrueNode();
+            if(start.Length == 1)
+            {
+                return start;
+            }
+            int index = GetIndexOfValueFromGraph(start);
 
+            TrueNode currentNode = trueGraph[index];
 
+            while (true)
+            {
+                if(currentNode.CountOutNeighbours() == 0)
+                {
+                    eulerPath.Add(currentNode);
+                    if (currentNode.CountOutNeighbours() == 0 && stack.Count == 0)
+                    {
+                        break;
+                    }
+                    currentNode = stack.Pop();
+                }
+                else
+                {
+                    stack.Push(currentNode);
+                    string node = currentNode.GetOneFromOutNeighbours(0);
+                    currentNode.DeleteOneOutNeighbour(node);
+                    int indexOfNode = GetIndexOfValueFromGraph(node);
+                    currentNode = trueGraph[indexOfNode];
+                }
+            }
 
+            eulerPath.Reverse();
+            bool isFirst = true;
+            foreach (TrueNode node in eulerPath)
+            {
+                madeSeq += isFirst ? node.GetValue()
+                                   : node.GetValue().Substring(node.GetValue().Length - 1);
+                isFirst = false;
+                node.IncVisits();
+            }
+
+            int countOvervisits = 0;
+            foreach(TrueNode node in trueGraph)
+            {
+                if(node.GetVisits() != 1)
+                {
+                    countOvervisits += node.GetVisits() - 1;
+                }
+            }
+            if(countOvervisits > howManyPossibleErrors)
+            {
+                return "3";
             }
 
             return madeSeq;
         }
+
+        // szukanie w liście wierzchołków wierzchołka o danej wartości
+        public static int GetIndexOfValueFromGraph(string s)
+        {
+            int index = 0;
+            foreach (TrueNode n in trueGraph)
+            {
+                if (n.GetValue() == s)
+                {
+                    break;
+                }
+                index++;
+            }
+            return index;
+        }
+
+
     }   
 }
